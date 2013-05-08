@@ -40,6 +40,7 @@ module ActiveMerchant
         hash[key] = case key.to_sym
         when :daily_pickup then :wholesale
         when :customer_counter then :retail
+		when :suggested_retail_rates then :retail
         else
           :occasional
         end
@@ -154,7 +155,7 @@ module ActiveMerchant
             # request << XmlNode.new('RequestOption', ((options[:service].nil? or options[:service] == :all) ? 'Shop' : 'Rate'))
           end
 
-          pickup_type = options[:pickup_type] || :daily_pickup
+          pickup_type = options[:pickup_type] || :suggested_retail_rates
 
           root_node << XmlNode.new('PickupType') do |pickup_type_node|
             pickup_type_node << XmlNode.new('Code', PICKUP_CODES[pickup_type])
