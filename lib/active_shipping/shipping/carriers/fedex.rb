@@ -156,13 +156,13 @@ module ActiveMerchant
       def build_rate_request(origin, destination, packages, options={})
         imperial = ['US','LR','MM'].include?(origin.country_code(:alpha2))
 
-        xml_request = XmlNode.new('RateRequest', 'xmlns' => 'http://fedex.com/ws/rate/v6') do |root_node|
+        xml_request = XmlNode.new('RateRequest', 'xmlns' => 'http://fedex.com/ws/rate/v13') do |root_node|
           root_node << build_request_header
 
           # Version
           root_node << XmlNode.new('Version') do |version_node|
             version_node << XmlNode.new('ServiceId', 'crs')
-            version_node << XmlNode.new('Major', '6')
+            version_node << XmlNode.new('Major', '13')
             version_node << XmlNode.new('Intermediate', '0')
             version_node << XmlNode.new('Minor', '0')
           end
@@ -183,10 +183,11 @@ module ActiveMerchant
               rs << build_location_node('Origin', origin)
             end
             
-            rs << XmlNode.new('RateRequestTypes', 'ACCOUNT')
+            rs << XmlNode.new('RateRequestTypes', 'LIST')
             rs << XmlNode.new('PackageCount', packages.size)
             packages.each do |pkg|
-              rs << XmlNode.new('RequestedPackages') do |rps|
+              rs << XmlNode.new('RequestedPackageLineItems') do |rps|
+                rps << XmlNode.new('GroupPackageCount', '1')
                 rps << XmlNode.new('Weight') do |tw|
                   tw << XmlNode.new('Units', imperial ? 'LB' : 'KG')
                   tw << XmlNode.new('Value', [((imperial ? pkg.lbs : pkg.kgs).to_f*1000).round/1000.0, 0.1].max)
@@ -239,8 +240,11 @@ module ActiveMerchant
         end
         
         client_detail = XmlNode.new('ClientDetail') do |cd|
-          cd << XmlNode.new('AccountNumber', @options[:account])
-          cd << XmlNode.new('MeterNumber', @options[:login])
+          #cd << XmlNode.new('AccountNumber', @options[:account])
+          #cd << XmlNode.new('MeterNumber', @options[:login])
+          cd << XmlNode.new('AccountNumber', '')     # Aaron 5/2013 don't pass an account number so we can get Retail rates
+          cd << XmlNode.new('MeterNumber', '')
+
         end
         
         trasaction_detail = XmlNode.new('TransactionDetail') do |td|
@@ -279,18 +283,23 @@ module ActiveMerchant
           transit_time = rated_shipment.get_text('TransitTime').to_s if service_code == "FEDEX_GROUND"
           max_transit_time = rated_shipment.get_text('MaximumTransitTime').to_s if service_code == "FEDEX_GROUND"
 
-          delivery_timestamp = rated_shipment.get_text('DeliveryTimestamp').to_s
+          #delivery_timestamp = rated_shipment.get_text('DeliveryTimestamp').to_s  # JLW commented out to match Aaron's code
 
-          delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, options)
+          #delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, options)  # JLW commented out
 
-          currency = handle_incorrect_currency_codes(rated_shipment.get_text('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Currency').to_s)
-          rate_estimates << RateEstimate.new(origin, destination, @@name,
-                              self.class.service_name_for_code(service_type),
-                              :service_code => service_code,
-                              :total_price => rated_shipment.get_text('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Amount').to_s.to_f,
-                              :currency => currency,
-                              :packages => packages,
-                              :delivery_range => delivery_range)
+          rated_shipment.elements.each('RatedShipmentDetails') do |rated_shipment_details|
+            if rated_shipment_details.get_text('ShipmentRateDetail/RateType')  == 'PAYOR_RETAIL_PACKAGE'
+              currency = handle_uk_currency(rated_shipment.get_text('ShipmentRateDetail/TotalNetCharge/Currency').to_s)
+              rate_estimates << RateEstimate.new(origin, destination, @@name,
+                                                 self.class.service_name_for_code(service_type),
+                                                 :service_code => service_code,
+                                                 :total_price => rated_shipment_details.get_text('ShipmentRateDetail/TotalNetCharge/Amount').to_s.to_f,
+                                                 :currency => currency,
+                                                 :packages => packages,
+                                                 :delivery_range => [rated_shipment_details.get_text('DeliveryTimestamp').to_s] * 2)
+            end
+
+          end
         end
 		
         if rate_estimates.empty?
