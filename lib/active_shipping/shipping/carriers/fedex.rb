@@ -289,7 +289,7 @@ module ActiveMerchant
 
           rated_shipment.elements.each('RatedShipmentDetails') do |rated_shipment_details|
             if rated_shipment_details.get_text('ShipmentRateDetail/RateType')  == 'PAYOR_RETAIL_PACKAGE'
-              currency = handle_uk_currency(rated_shipment.get_text('ShipmentRateDetail/TotalNetCharge/Currency').to_s)
+              currency = handle_incorrect_currency_codes(rated_shipment.get_text('ShipmentRateDetail/TotalNetCharge/Currency').to_s)
               rate_estimates << RateEstimate.new(origin, destination, @@name,
                                                  self.class.service_name_for_code(service_type),
                                                  :service_code => service_code,
@@ -452,7 +452,7 @@ module ActiveMerchant
         else currency
         end
       end
-
+      
       def parse_transit_times(times)
         results = []
         times.each do |day_count|
