@@ -14,7 +14,8 @@ module ActiveMerchant
 
       RESOURCES = {
         :rates => 'ups.app/xml/Rate',
-        :track => 'ups.app/xml/Track'
+        :track => 'ups.app/xml/Track',
+        :av => 'ups.app/xml/AV'
       }
 
       PICKUP_CODES = HashWithIndifferentAccess.new({
@@ -122,7 +123,52 @@ module ActiveMerchant
         parse_tracking_response(response, options)
       end
 
+      def validate_city_address(address, options={})
+        options.update(@options)
+        access_request = '<?xml version="1.0"?>' + build_access_request    # Must add the <?xml...?> or UPS API will reject call (not sure why doesn't reject other calls)
+        address_request = '<?xml version="1.0"?>' + build_city_address_validation_request(address, options)
+        response = commit(:av, save_request(access_request + address_request))
+        validation = parse_validate_city_address_response(response, options)
+      rescue ActiveMerchant::Shipping::ResponseError => error
+        puts error.message
+        raise error
+      end
+
       protected
+
+      def build_city_address_validation_request(address, options={})
+        xml_request = XmlNode.new('AddressValidationRequest') do |address_validation_request|
+          address_validation_request << XmlNode.new('Request') do |request|
+            request <<  XmlNode.new('RequestAction', 'AV')
+          end
+          address_validation_request << XmlNode.new('Address') do |address_request|
+            address_request <<  XmlNode.new('City', address.city)
+            address_request <<  XmlNode.new('StateProvinceCode', address.state)
+            address_request <<  XmlNode.new('PostalCode', address.zip)
+            address_request <<  XmlNode.new('CountryCode', address.country_code || 'US')
+          end
+        end
+        xml_request.to_s
+      end
+
+      def parse_validate_city_address_response(response, options={})
+        xml = REXML::Document.new(response)
+
+        if response_success?(xml)
+          fields = {}
+
+          xml.elements.each("AddressValidationResponse/AddressValidationResult/Address/*") do |element|
+            fields.merge!({element.name.to_sym => element.text}) do |key, old, new|
+              old.is_a?(Array) ? old << new : [old, new]
+            end
+          end
+
+          validation = fields  # TODO: create a proper validation object rather than stuffing things into a Hash; see parse_validate_address_response()
+        else
+          raise ActiveMerchant::Shipping::ResponseError, response
+        end
+        validation
+      end
 
       def upsified_location(location)
         if location.country_code == 'US' && US_TERRITORIES_TREATED_AS_COUNTRIES.include?(location.state)
