@@ -47,7 +47,11 @@ module ActiveMerchant
       def requirements
         [:key]
       end
-      
+
+      def maximum_weight
+        Mass.new(1000000, :pounds)    # Make an arbitrarily large number; there really isn't a limit
+      end
+
       def find_rates(origin, destination, packages, options = {})
         options = @options.update(options)
         packages = Array(packages)
