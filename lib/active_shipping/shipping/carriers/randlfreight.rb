@@ -139,7 +139,7 @@ module ActiveMerchant
           rate_estimates << RateEstimate.new(origin, destination, @@name,
              service_name,
              :service_code => service_code,
-             :total_price => service_level.text('NetCharge').sub('$','').to_f,           # active shipping returns this in cents
+             :total_price => service_level.text('NetCharge').sub('$','').sub(',','').to_f,     # active shipping returns this in cents
              :currency => 'USD',
              :packages => packages,
              :delivery_range => [Date.today + service_level.get_text('ServiceDays').to_s.to_i] * 2)    #delivery_range is an array of dates; R+L does not return a delivery date, only "Service Days"; need to update to business days
