@@ -283,9 +283,9 @@ module ActiveMerchant
           transit_time = rated_shipment.get_text('TransitTime').to_s if service_code == "FEDEX_GROUND"
           max_transit_time = rated_shipment.get_text('MaximumTransitTime').to_s if service_code == "FEDEX_GROUND"
 
-          #delivery_timestamp = rated_shipment.get_text('DeliveryTimestamp').to_s  # JLW commented out to match Aaron's code
+          delivery_timestamp = rated_shipment.get_text('DeliveryTimestamp').to_s  # JLW commented out to match Aaron's code
 
-          #delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, options)  # JLW commented out
+          delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, options)  # JLW commented out
 
           rated_shipment.elements.each('RatedShipmentDetails') do |rated_shipment_details|
             if rated_shipment_details.get_text('ShipmentRateDetail/RateType')  == 'PAYOR_RETAIL_PACKAGE'
@@ -296,7 +296,8 @@ module ActiveMerchant
                                                  :total_price => rated_shipment_details.get_text('ShipmentRateDetail/TotalNetCharge/Amount').to_s.to_f,
                                                  :currency => currency,
                                                  :packages => packages,
-                                                 :delivery_range => [rated_shipment_details.get_text('DeliveryTimestamp').to_s] * 2)
+                                                 :delivery_date => delivery_timestamp,
+                                                 :delivery_range => delivery_range)
             end
 
           end
