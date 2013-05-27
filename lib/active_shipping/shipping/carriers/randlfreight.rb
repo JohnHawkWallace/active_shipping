@@ -94,9 +94,9 @@ module ActiveMerchant
             end
             rs << XmlNode.new('rlc:DeclaredValue', options[:value])         #required
             rs << XmlNode.new('rlc:Accessorials') do |ac|                   #optional
-              ac << XmlNode.new('rlc:Accessorial', Accessorials['residential_delivery'])        #need to pull these from options instead of hard code
-              ac << XmlNode.new('rlc:Accessorial', Accessorials['destination_liftgate'])
-             ac << XmlNode.new('rlc:Accessorial', Accessorials['delivery_notification'])
+              ac << XmlNode.new('rlc:Accessorial', Accessorials['residential_delivery']) if options[:residential]
+              ac << XmlNode.new('rlc:Accessorial', Accessorials['destination_liftgate']) if options[:liftgate]
+             ac << XmlNode.new('rlc:Accessorial', Accessorials['delivery_notification']) if options[:delivery_notification]
 
             end
 
