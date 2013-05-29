@@ -188,6 +188,12 @@ module ActiveMerchant
             packages.each do |pkg|
               rs << XmlNode.new('RequestedPackageLineItems') do |rps|
                 rps << XmlNode.new('GroupPackageCount', '1')
+                if options[:value] and Float(options[:value]) > 0
+                  rps << XmlNode.new('InsuredValue') do |iv|
+                    iv << XmlNode.new('Currency','USD')
+                    iv << XmlNode.new('Amount', options[:value] )
+                  end
+                end
                 rps << XmlNode.new('Weight') do |tw|
                   tw << XmlNode.new('Units', imperial ? 'LB' : 'KG')
                   tw << XmlNode.new('Value', [((imperial ? pkg.lbs : pkg.kgs).to_f*1000).round/1000.0, 0.1].max)

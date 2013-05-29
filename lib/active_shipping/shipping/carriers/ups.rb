@@ -260,6 +260,40 @@ module ActiveMerchant
                   package_weight << XmlNode.new("Weight", [value,0.1].max)
                 end
 
+                package_node << XmlNode.new("PackageServiceOptions") do |package_svc_options|
+                  #!DeliveryConfifrmation - only allowed for shipments within the US; cannot be used with COD
+                  if false # need to pull in signature option from activeshipping options Aaron 5/2013
+                    package_svc_options << XmlNode.new("DeliveryConfirmation") do |dcs|
+                      #!DCISType::string '1' (delivery confirmation), '2' (signature required), or '3' (adult signature required)
+                      dcs << XmlNode.new("DCISType", '2')
+                    end
+                  end
+                  if false #implement later  Aaron 5/2013
+                    package_svc_options << XmlNode.new("COD") do |cod|
+                      #!COD [optional]    package-level COD available for shipments from  US/PR to US/PR, CA to CA, and CA
+                      # to US; CA to US COD is not allowed for letter/envelope packages; collect on delivery; UPS should
+                      # collect money from recipient prior to releasing package
+                      #!CODFundsCode::string [optional] '1' (cash only, for Canada), '8' (packages only, cashier's check
+                      # or money order, no cash allowed), or '9' (shipments only, personal check, cashier's check, or money order, no cash allowed)
+                      cod << XmlNode.new("CODFundsCode", '')
+                      cod << XmlNode.new("CODAmount") do |codamt|
+                        codamt << XmlNode.new("CurrencyCode", '')
+                        codamt << XmlNode.new("MonetaryValue", '')
+                      end
+                    end
+                  end
+
+                  if options[:value] and Float(options[:value]) > 0
+                    package_svc_options << XmlNode.new("InsuredValue") do |dv|
+                      dv << XmlNode.new("CurrencyCode2", 'USD')
+                      dv << XmlNode.new("MonetaryValue", options[:value])
+                    end
+                  end
+
+                  # not implemented:  * Shipment/Package/PackageServiceOptions/ProactiveIndicator element
+                  # not implemented:  * Shipment/Package/PackageServiceOptions/Insurance element
+                  # not implemented:  * Shipment/Package/PackageServiceOptions/VerbalConfirmation element
+                end
                 # not implemented:  * Shipment/Package/LargePackageIndicator element
                 #                   * Shipment/Package/ReferenceNumber element
                 #                   * Shipment/Package/PackageServiceOptions element
